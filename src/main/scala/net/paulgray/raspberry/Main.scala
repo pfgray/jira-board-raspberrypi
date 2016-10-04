@@ -8,6 +8,11 @@ import com.pi4j.io.gpio.RaspiBcmPin._
   */
 object Main {
 
+  type Segments = Map[Segment, GpioPinDigitalOutput]
+  type Columns = Map[Column, GpioPinDigitalOutput]
+
+  case class Display(segments: Segments, columns: Columns)
+
   def gpio = GpioFactory.getInstance()
 
   /**
@@ -24,19 +29,22 @@ object Main {
    *
    * @return
    */
-  def segments(): Map[String, (GpioPinDigitalOutput)] = Map(
-    "A"  -> raspiPin(GPIO_23),
-    "B"  -> raspiPin(GPIO_08),
-    "C"  -> raspiPin(GPIO_15),
-    "D"  -> raspiPin(GPIO_24),
-    "E"  -> raspiPin(GPIO_07),
-    "F"  -> raspiPin(GPIO_18),
-    "G"  -> raspiPin(GPIO_25),
-    "DP" -> raspiPin(GPIO_14),
-    "C1" -> raspiPin(GPIO_12),
-    "C2" -> raspiPin(GPIO_16),
-    "C3" -> raspiPin(GPIO_03),
-    "C4" -> raspiPin(GPIO_21)
+  def segments(): Segments = Map(
+    A  -> raspiPin(GPIO_23),
+    B  -> raspiPin(GPIO_08),
+    C  -> raspiPin(GPIO_15),
+    D  -> raspiPin(GPIO_24),
+    E  -> raspiPin(GPIO_07),
+    F  -> raspiPin(GPIO_18),
+    G  -> raspiPin(GPIO_25),
+    DP -> raspiPin(GPIO_14)
+  )
+
+  def columns(): Columns = Map(
+    C1 -> raspiPin(GPIO_12),
+    C2 -> raspiPin(GPIO_16),
+    C3 -> raspiPin(GPIO_03),
+    C4 -> raspiPin(GPIO_21)
   )
 
   def raspiPin(pin: Pin, pinState: PinState = PinState.LOW): GpioPinDigitalOutput =
@@ -51,42 +59,14 @@ object Main {
     println("Setup broadcom.")
     val segs = segments()
     println("setup segments.")
-    while(true){
-      println("ready for input...")
+    val cols = columns()
+    println("setup columns.")
 
-      val ln = io.StdIn.readLine()
+    App.run(Display(segs, cols))
 
-      val segment = ln.trim.toUpperCase
-
-      segs.get(segment) match {
-        case Some(pin) =>
-          println(s"Changing segment: $segment, from ${pin.getState} to: ${pin.getState.reverse}")
-          pin.setState(pin.getState.reverse)
-        case None =>
-          if(segment == "Z") {
-            println("Goodbye.")
-            segs foreach {
-              case (key, pin) =>
-                if(pin.getState.equals(PinState.HIGH)){
-                  println(s"  shutting down segment $key")
-                  pin.setState(PinState.LOW)
-                }
-            }
-            gpio.shutdown()
-            System.exit(0)
-          }
-      }
-      //Thread.sleep(5000)
-    }
-
-  }
-
-  implicit class PinStateOps(p: PinState){
-    def reverse: PinState =
-      p.getValue match {
-        case 0 => PinState.HIGH
-        case _ => PinState.LOW
-      }
   }
 
 }
+
+
+
